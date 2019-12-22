@@ -27,8 +27,16 @@
 // Port Expander
 #include <Adafruit_MCP23017.h>
 
+// MQTT
+#include <PubSubClient.h>
+
 /* WIFI */
 char hostname[32] = {0};
+
+/* MQTT */
+WiFiClient wifiClient;
+PubSubClient client(wifiClient);
+const char* broker = "10.81.95.165";
 
 /* Port Expander */
 Adafruit_MCP23017 mcp0;
@@ -41,6 +49,30 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println(F("Config Mode"));
   Serial.println(WiFi.softAPIP());
   Serial.println(myWiFiManager->getConfigPortalSSID());
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.println("MQTT Connecting...");
+    if (client.connect(hostname)) {
+      Serial.println("MQTT connected");
+      // client.subscribe("fpp/#");
+    } else {
+      Serial.print(".");
+      delay(1000);
+    }
+  }
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
 }
 
 void setup()
@@ -153,6 +185,10 @@ void setup()
   mcp0.pinMode(15, OUTPUT); // 8
   mcp0.digitalWrite(15, HIGH);
 
+  /* MQTT */
+  client.setServer(broker, 1883);
+  client.setCallback(callback);
+
   /* LED */
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
@@ -192,9 +228,59 @@ void TurnOffAllLedsExcept(int button) {
   if (button != 8) mcp0.digitalWrite(15, LOW); // 8
 }
 
+void PublishFpp(int button) {
+  Serial.print("Publishing start default playlist ");
+  Serial.println(button);
+  if (button == 1)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/1/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/1/repeat", "1");
+  }
+  else if (button == 2)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/2/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/2/repeat", "1");
+  }
+  else if (button == 3)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/3/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/3/repeat", "1");
+  }
+  else if (button == 4)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/4/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/4/repeat", "1");
+  }
+  else if (button == 5)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/5/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/5/repeat", "1");
+  }
+  else if (button == 6)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/6/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/6/repeat", "1");
+  }
+  else if (button == 7)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/7/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/7/repeat", "1");
+  }
+  else if (button == 8)
+  {
+    client.publish("fpp/falcon/player/FPP/set/playlist/8/start", "");
+    client.publish("fpp/falcon/player/FPP/set/playlist/8/repeat", "1");
+  }
+}
+
 void loop()
 {
   ArduinoOTA.handle();
+  if (!client.connected())
+  {
+    reconnect();
+  }
+  client.loop();
   
   if (millis() > waitTimeout)
   {
@@ -209,12 +295,10 @@ void loop()
     if (button > 0)
     {
       waitTimeout = millis() + 15000;
-      
+
       TurnOffAllLedsExcept(button);
 
-
-
-      
+      PublishFpp(button);
     }
   }
 }
